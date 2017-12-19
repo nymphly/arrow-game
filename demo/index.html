@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arrow Game Demo</title>
+    <script src="../src/game.js"></script>
+
+</head>
+<body>
+
+<button id="start">Start the game</button>
+<div id="message" style="color: red"></div>
+<div id="remaining"></div>
+<div id="counter" style="color:grey"></div>
+
+<script>
+  var game = new ArrowGame(document, 'message', 'remaining', 'counter');
+
+  var button = document.getElementById('start');
+  button.addEventListener('click', function() {
+    game.stop();
+    game.start();
+  });
+</script>
+</body>
+</html>
