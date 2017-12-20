@@ -3,23 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <title>Arrow Game Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
     <script src="../src/game.js"></script>
 
 </head>
 <body>
 
-<button id="start">Start the game</button>
-<div id="message" style="color: red"></div>
-<div id="remaining"></div>
-<div id="counter" style="color:grey"></div>
+<div class="container" >
+    <div class="panel panel-primary">
+        <div class="panel-heading"><h4 id="message">Game is ready to play. Press "Start the game" button.</h4></div>
+        <div class="panel-body">
+            <div class="progress" style="display: none" id="progress">
+                <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                    70%
+                </div>
+            </div>
+            <div class="container" id="start"><a class="btn btn-primary">Start the game</a></div>
+            <h5 id="counter"></h5>
+
+        </div>
+    </div>
+
+
+</div>
+
 
 <script>
-  var game = new ArrowGame(document, 'message', 'remaining', 'counter');
+  var game = new ArrowGame(document);
 
   var button = document.getElementById('start');
   button.addEventListener('click', function() {
     game.stop();
     game.start();
+  });
+
+  game.onStart(function() {
+    document.getElementById('progress').style.display = 'block';
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-bar').innerHTML = (ArrowGame.CONFIG['interval'] / 1000).toPrecision(2) + ' seconds';
+  });
+
+  game.onPlay(function() {
+    document.getElementById('message').innerHTML = 'Press ' + this.key;
+    document.getElementById('progress-bar').style.width = this.percent;
+    document.getElementById('progress-bar').innerHTML = this.secondsRounded + ' seconds';
+    document.getElementById('counter').innerHTML = 'Current score is ' + this.counter;
+  });
+
+  game.onStop(function() {
+    document.getElementById('message').innerHTML = 'Game is ready to play. Press "Start the game" button.';
+    document.getElementById('progress').style.display = 'none';
+    document.getElementById('start').style.display = 'block';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-bar').innerHTML = (ArrowGame.CONFIG['interval'] / 1000).toPrecision(2) + ' seconds';
+    document.getElementById('counter').innerHTML = 'Your result is ' + this.counter;
   });
 </script>
 </body>

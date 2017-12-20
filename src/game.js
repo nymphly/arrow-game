@@ -1,40 +1,19 @@
 /**
  * Arrow game main class.
  * @param {string|Element} listenElement - Element or ID to listen and handle key events..
- * @param {string|Element} messageElement - Element to display task message.
- * @param {string|Element} timeRemainingElement - Element to display time remaining.
- * @param {string|Element} counterElement - Element to display counter.
  * @constructor
  */
-ArrowGame = function(listenElement, messageElement, timeRemainingElement, counterElement) {
+ArrowGame = function(listenElement) {
   /**
    * @type {Element}
    * @private
    */
   this.listenElement_ = ArrowGame.isString(listenElement) ? document.getElementById(listenElement) : listenElement;
 
-  /**
-   * @type {Element}
-   * @private
-   */
-  this.messageElement_ = ArrowGame.isString(messageElement) ? document.getElementById(messageElement) : messageElement;
-
-  /**
-   * @type {Element}
-   * @private
-   */
-  this.timeRemainingElement_ = ArrowGame.isString(timeRemainingElement) ? document.getElementById(timeRemainingElement) : timeRemainingElement;
-
-  /**
-   * @type {Element}
-   * @private
-   */
-  this.counterElement_ = ArrowGame.isString(counterElement) ? document.getElementById(counterElement) : counterElement;
-
-  if (this.listenElement_ && this.messageElement_ && this.counterElement_) {
+  if (this.listenElement_) {
     this.listenElement_.addEventListener('keydown', this.listenKeys_);
   } else {
-    console.error('ArrowGame: some of containers is not set properly. Please, check it.');
+    console.error('ArrowGame: events listener container is not set properly. Please, check it.');
   }
 
   /**
@@ -64,6 +43,10 @@ ArrowGame = function(listenElement, messageElement, timeRemainingElement, counte
    * @private
    */
   this.counter_ = 0;
+
+  this.startCallback = null;
+  this.playingCallback = null;
+  this.stopCallback = null;
 
   /**
    * Game instance to store context.
@@ -135,16 +118,34 @@ ArrowGame.prototype.getRandomKey = function() {
 };
 
 
+ArrowGame.prototype.onStart = function(f) {
+  this.startCallback = f;
+};
+
+
+ArrowGame.prototype.onPlay = function(f) {
+  this.playingCallback = f;
+};
+
+
+ArrowGame.prototype.onStop = function(f) {
+  this.stopCallback = f;
+};
+
+
 /**
  * Keys listener.
  * @param {Event} e - Event.
  * @private
  */
 ArrowGame.prototype.listenKeys_ = function(e) {
-  e.preventDefault();
+  var eventKey = e.keyCode;
+
+  if (eventKey >= 37 && eventKey <= 40)
+    e.preventDefault();
+
   if (!isNaN(ArrowGame.game.keyIndex_)) {
     var key = ArrowGame.CONFIG['keys'][ArrowGame.game.keyIndex_];
-    var eventKey = e.keyCode;
     var checked = false;
     for (var i = 0; i < key['keyCodes'].length; i++) {
       var code = key['keyCodes'][i];
@@ -157,7 +158,6 @@ ArrowGame.prototype.listenKeys_ = function(e) {
       ArrowGame.game.startTimestamp_ = (new Date()).getTime();
       ArrowGame.game.counter_ += 1;
       ArrowGame.game.getRandomKey();
-      ArrowGame.game.updateUserMessages_();
     } else {
       ArrowGame.game.stop();
     }
@@ -172,6 +172,7 @@ ArrowGame.prototype.start = function() {
   this.startTimestamp_ = (new Date()).getTime();
   this.getRandomKey();
   this.intervalId_ = setInterval(this.intervalHandler_, 50);
+  this.startCallback.call(Window);
 };
 
 
@@ -179,41 +180,34 @@ ArrowGame.prototype.start = function() {
  * Stops the game.
  */
 ArrowGame.prototype.stop = function() {
+  var context = {
+    'counter': this.counter_
+  };
+  this.stopCallback.call(context);
+
   this.startTimestamp_ = NaN;
   this.keyIndex_ = NaN;
   clearInterval(this.intervalId_);
-  this.updateUserMessages_(true);
   this.counter_ = 0;
 };
 
 
-/**
- * Updates game messages.
- * @param {boolean=} opt_stop - Whether to stop the game.
- * @private
- */
-ArrowGame.prototype.updateUserMessages_ = function(opt_stop) {
-  if (opt_stop) {
-    this.timeRemainingElement_.innerHTML = 'Ready to play';
-    this.counterElement_.innerHTML = 'Game is stopped. Your record is ' + this.counter_;
-    this.messageElement_.innerHTML = '';
-  } else {
-    var now = (new Date()).getTime();
-    var mills = ArrowGame.CONFIG['interval'] - (now - this.startTimestamp_);
-    if (mills < 0) {
-      this.stop();
-    } else {
-      var rounded = (mills / 1000).toPrecision(2);
-      this.timeRemainingElement_.innerHTML = rounded + ' seconds remaining.';
-      var key = ArrowGame.CONFIG['keys'][this.keyIndex_];
-      this.messageElement_.innerHTML = 'Press ' + key['message'];
-      this.counterElement_.innerHTML = 'Current score is ' + this.counter_;
-    }
-  }
-};
-
-
-
 ArrowGame.prototype.intervalHandler_ = function() {
-  ArrowGame.game.updateUserMessages_();
+  var game = ArrowGame.game;
+  var now = (new Date()).getTime();
+
+  var mills = ArrowGame.CONFIG['interval'] - (now - game.startTimestamp_);
+  if (mills < 0) {
+    game.stop();
+  } else {
+    var key = ArrowGame.CONFIG['keys'][game.keyIndex_];
+    var context = {
+      'milliseconds': mills,
+      'percent': ((mills / ArrowGame.CONFIG['interval']) * 100) + '%',
+      'secondsRounded': (mills / 1000).toPrecision(2),
+      'key': key['message'],
+      'counter': game.counter_
+    };
+    game.playingCallback.call(context);
+  }
 };
